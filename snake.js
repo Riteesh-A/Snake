@@ -1,5 +1,7 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const submitUrl = new URL("http://127.0.0.1:3000/submit-score");
+const leaderboardUrl = new URL("http://localhost:3000/leaderboard");
 
 let snake = [{ x: 200, y: 200 }];
 let food = { x: 300, y: 300 };
@@ -7,45 +9,49 @@ let dx = 10;
 let dy = 0;
 let gameOver = false;
 
+let playAgain = true;
+
+setInterval(() => {
+  if (playAgain) requestAnimationFrame(gameLoop);
+}, 125);
+
 function gameLoop() {
   if (gameOver) {
     const playerName = prompt("Game Over! Enter your name:");
     const score = snake.length;
     submitScore(playerName, score);
-    return;
+    playAgain = confirm("Play Again?");
+    if (playAgain) {
+      snake = [{ x: 200, y: 200 }];
+      food = { x: 300, y: 300 };
+      dx = 10;
+      dy = 0;
+      gameOver = false;
+    } else return;
   }
 
-  setTimeout(() => {
-    clearCanvas();
-    drawFood();
-    moveSnake();
-    drawSnake();
-    checkCollision();
-    requestAnimationFrame(gameLoop);
-  }, 100);
+  drawFood();
+  const tail = moveSnake();
+  drawSnake(tail);
+  checkCollision();
 }
 
-function clearCanvas() {
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function drawSnake() {
+function drawSnake(tail) {
   ctx.fillStyle = "green";
-  snake.forEach((part) => {
-    ctx.fillRect(part.x, part.y, 10, 10);
-  });
+  ctx.fillRect(snake[0].x, snake[0].y, 10, 10);
+  if (tail) {
+    ctx.fillStyle = "white";
+    ctx.fillRect(tail.x, tail.y, 10, 10);
+  }
 }
 
 function moveSnake() {
   const head = { x: snake[0].x + dx, y: snake[0].y + dy };
   snake.unshift(head);
 
-  if (head.x === food.x && head.y === food.y) {
-    placeFood();
-  } else {
-    snake.pop();
-  }
+  if (head.x === food.x && head.y === food.y) placeFood();
+  else return snake.pop();
+  return false;
 }
 
 function drawFood() {
@@ -76,6 +82,28 @@ function snakeIntersection() {
     if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true;
   }
   return false;
+}
+
+function submitScore(playerName, score) {
+  fetch(submitUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ playerName, score }),
+  }).then(() => updateLeaderboard());
+}
+
+async function updateLeaderboard() {
+  const response = await fetch(leaderboardUrl);
+  const scores = await response.json();
+  const leaderboardList = document.getElementById("leaderboardList");
+  leaderboardList.innerHTML = "";
+  scores.forEach((score) => {
+    const li = document.createElement("li");
+    li.textContent = `${score.playerName}: ${score.score}`;
+    leaderboardList.appendChild(li);
+  });
 }
 
 document.addEventListener("keydown", changeDirection);
