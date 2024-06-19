@@ -11,6 +11,11 @@ let gameOver = false;
 
 let playAgain = true;
 
+function clearCanvas(){
+  ctx.fillStyle = "white"
+  ctx.fillRect(0,0, canvas.width, canvas.height);
+}
+
 setInterval(() => {
   if (playAgain) requestAnimationFrame(gameLoop);
 }, 125);
@@ -27,6 +32,7 @@ function gameLoop() {
       dx = 10;
       dy = 0;
       gameOver = false;
+      clearCanvas()
     } else return;
   }
 
@@ -105,6 +111,34 @@ async function updateLeaderboard() {
     leaderboardList.appendChild(li);
   });
 }
+
+async function createLeaderboardEntry(playerName, score) {
+  const entry = new Leaderboard({ playerName, score });
+  await entry.save();
+  console.log('Leaderboard entry created:', entry);
+}
+
+async function getTopScores(limit = 10) {
+  const topScores = await Leaderboard.find().sort({ score: -1 }).limit(limit);
+  console.log('Top scores:', topScores);
+  return topScores;
+}
+
+async function updateLeaderboardEntry(playerName, newScore) {
+  const updatedEntry = await Leaderboard.findOneAndUpdate(
+    { playerName },
+    { score: newScore },
+    { new: true }
+  );
+  console.log('Leaderboard entry updated:', updatedEntry);
+}
+
+async function deleteLeaderboardEntry(playerName) {
+  const result = await Leaderboard.deleteOne({ playerName });
+  console.log('Leaderboard entry deleted:', result);
+}
+
+
 
 document.addEventListener("keydown", changeDirection);
 
