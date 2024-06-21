@@ -1,7 +1,8 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const submitUrl = new URL("http://127.0.0.1:3000/submit-score");
-const leaderboardUrl = new URL("http://localhost:3000/leaderboard");
+
+const lambdaBaseUrl =
+  "https://vx2we254kpdbgjnfwttjlqcjta0ntend.lambda-url.ap-south-1.on.aws";
 
 let snake = [{ x: 200, y: 200 }];
 let food = { x: 300, y: 300 };
@@ -11,9 +12,9 @@ let gameOver = false;
 
 let playAgain = true;
 
-function clearCanvas(){
-  ctx.fillStyle = "white"
-  ctx.fillRect(0,0, canvas.width, canvas.height);
+function clearCanvas() {
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 setInterval(() => {
@@ -32,7 +33,7 @@ function gameLoop() {
       dx = 10;
       dy = 0;
       gameOver = false;
-      clearCanvas()
+      clearCanvas();
     } else return;
   }
 
@@ -91,7 +92,7 @@ function snakeIntersection() {
 }
 
 function submitScore(playerName, score) {
-  fetch(submitUrl, {
+  fetch(new URL(lambdaBaseUrl + "/submit-score"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -101,7 +102,7 @@ function submitScore(playerName, score) {
 }
 
 async function updateLeaderboard() {
-  const response = await fetch(leaderboardUrl);
+  const response = await fetch(new URL(lambdaBaseUrl + "/leaderboard"));
   const scores = await response.json();
   const leaderboardList = document.getElementById("leaderboardList");
   leaderboardList.innerHTML = "";
@@ -115,12 +116,12 @@ async function updateLeaderboard() {
 async function createLeaderboardEntry(playerName, score) {
   const entry = new Leaderboard({ playerName, score });
   await entry.save();
-  console.log('Leaderboard entry created:', entry);
+  console.log("Leaderboard entry created:", entry);
 }
 
 async function getTopScores(limit = 10) {
   const topScores = await Leaderboard.find().sort({ score: -1 }).limit(limit);
-  console.log('Top scores:', topScores);
+  console.log("Top scores:", topScores);
   return topScores;
 }
 
@@ -130,15 +131,13 @@ async function updateLeaderboardEntry(playerName, newScore) {
     { score: newScore },
     { new: true }
   );
-  console.log('Leaderboard entry updated:', updatedEntry);
+  console.log("Leaderboard entry updated:", updatedEntry);
 }
 
 async function deleteLeaderboardEntry(playerName) {
   const result = await Leaderboard.deleteOne({ playerName });
-  console.log('Leaderboard entry deleted:', result);
+  console.log("Leaderboard entry deleted:", result);
 }
-
-
 
 document.addEventListener("keydown", changeDirection);
 
